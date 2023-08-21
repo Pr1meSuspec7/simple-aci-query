@@ -91,11 +91,11 @@ $ python simple-aci-query.py -c l1PhysIf -p descr -f "esx|ESX"
 ### Extra
 
 How many times have you asked yourself "is this vlan used in ACI?" or "what are the vlans I'm using in ACI?" 
-Now you can know in a flash using the script aci-all-vlans.py.
+Now you can know in a flash using the script all-vlans-query.py.
 
 Simply by running the command
 ```sh
-$ python aci-all-vlans-py
+$ python all-vlans-query.py
 ```
 you will find all the vlans actually used by all EPGs and L3Outs. This list will be saved in the vlans.log file.
 
