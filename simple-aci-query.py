@@ -46,12 +46,10 @@ apic_ip = apic_vars['apic_ip']
 apic_user = apic_vars['apic_user']
 apic_pwd = apic_vars['apic_pwd']
 BASE_URL = 'https://' + apic_ip + '/api'
-cookie = ""
 
 
 # Get APIC Token
 def get_apic_token(url, apic_user, apic_pwd):
-	global cookie
 	login_url = f'{url}/aaaLogin.json'
 	s = requests.Session()
 	payload = {
@@ -66,7 +64,7 @@ def get_apic_token(url, apic_user, apic_pwd):
 	resp_json = resp.json()
 	token = resp_json['imdata'][0]['aaaLogin']['attributes']['token']
 	cookie = {'APIC-cookie':token}
-
+	return cookie
 
 
 # Function to query MO
@@ -98,5 +96,5 @@ def check_property_filter():
 
 check_property_filter()
 interactive_pwd()
-get_apic_token(BASE_URL, apic_user, apic_pwd)
+cookie = get_apic_token(BASE_URL, apic_user, apic_pwd)
 aci_query(BASE_URL, args.class_name, args.property_name, args.filter_name, cookie)
