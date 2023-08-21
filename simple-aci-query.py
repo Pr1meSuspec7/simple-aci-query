@@ -9,6 +9,23 @@ from getpass import getpass
 requests.urllib3.disable_warnings()
 
 
+# Argument definitions
+parser = argparse.ArgumentParser(description='Simple script to run ACI moquery')
+parser.add_argument('-c', '--class_name', type=str, help='Object class to query: fvTenant, fvAp, fvAEPg, fvRsPathAtt, l3extRsPathL3OutAtt, l1PhysIf', required=True)
+parser.add_argument('-p', '--property_name', type=str, help='Class property to filter: descr, dn, encap', required=False)
+parser.add_argument('-f', '--filter_name', type=str, help='String to match in filtered property', required=False)
+args = parser.parse_args()
+
+
+# Function to ask password
+def interactive_pwd():
+    global apic_pwd
+    if apic_pwd == "" or apic_pwd == None:
+          apic_pwd = getpass("Insert APIC password for user " + apic_user +": ")
+    else:
+          pass
+    
+
 # Function to convert yaml to json
 def yaml_to_json(file):
     with open(file, "r") as stream:
@@ -28,36 +45,28 @@ apic_vars = yaml_to_json("apic.yaml")
 apic_ip = apic_vars['apic_ip']
 apic_user = apic_vars['apic_user']
 apic_pwd = apic_vars['apic_pwd']
-
-
-# Argument definitions
-parser = argparse.ArgumentParser(description='Simple script to run ACI moquery')
-parser.add_argument('-c', '--class_name', type=str, help='Object class to query: fvTenant, fvAp, fvAEPg, fvRsPathAtt, l3extRsPathL3OutAtt, l1PhysIf', required=True)
-parser.add_argument('-p', '--property_name', type=str, help='Class property to filter: descr, dn, encap', required=False)
-parser.add_argument('-f', '--filter_name', type=str, help='String to match in filtered property', required=False)
-args = parser.parse_args()
-
-
-# Login
 BASE_URL = 'https://' + apic_ip + '/api'
-login_url = f'{BASE_URL}/aaaLogin.json'
+cookie = ""
 
-s = requests.Session()
 
-payload = {
-	"aaaUser" : {
-		"attributes" : {
-			"name" : apic_user,
-			"pwd" : apic_pwd
+# Get APIC Token
+def get_apic_token(url, apic_user, apic_pwd):
+	global cookie
+	login_url = f'{url}/aaaLogin.json'
+	s = requests.Session()
+	payload = {
+		"aaaUser" : {
+			"attributes" : {
+				"name" : apic_user,
+				"pwd" : apic_pwd
+			}
 		}
 	}
-}
+	resp = s.post(login_url, json=payload, verify=False)
+	resp_json = resp.json()
+	token = resp_json['imdata'][0]['aaaLogin']['attributes']['token']
+	cookie = {'APIC-cookie':token}
 
-resp = s.post(login_url, json=payload, verify=False)
-resp_json = resp.json()
-token = resp_json['imdata'][0]['aaaLogin']['attributes']['token']
-cookie = {'APIC-cookie':token}
-#print(token)
 
 
 # Function to query MO
@@ -88,4 +97,6 @@ def check_property_filter():
 ########################
 
 check_property_filter()
+interactive_pwd()
+get_apic_token(BASE_URL, apic_user, apic_pwd)
 aci_query(BASE_URL, args.class_name, args.property_name, args.filter_name, cookie)

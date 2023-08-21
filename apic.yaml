@@ -1,4 +1,5 @@
+# Fill apic_pwd to skip interactive input
 ---
 apic_ip: "sandboxapicdc.cisco.com"
 apic_user: "admin"
-apic_pwd: "!v3G@!4@Y"
+apic_pwd: ""

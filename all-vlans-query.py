@@ -5,6 +5,15 @@ from getpass import getpass
 requests.urllib3.disable_warnings()
 
 
+# Function to ask password
+def interactive_pwd():
+    global apic_pwd
+    if apic_pwd == "" or apic_pwd == None:
+          apic_pwd = getpass("Insert APIC password for user " + apic_user +": ")
+    else:
+          pass
+    
+
 # Function to convert yaml to json
 def yaml_to_json(file):
     with open(file, "r") as stream:
@@ -24,32 +33,31 @@ apic_vars = yaml_to_json("apic.yaml")
 apic_ip = apic_vars['apic_ip']
 apic_user = apic_vars['apic_user']
 apic_pwd = apic_vars['apic_pwd']
+BASE_URL = 'https://' + apic_ip + '/api'
+cookie = ""
 
+
+# Get APIC Token
+def get_apic_token(url, apic_user, apic_pwd):
+	global cookie
+	login_url = f'{url}/aaaLogin.json'
+	s = requests.Session()
+	payload = {
+		"aaaUser" : {
+			"attributes" : {
+				"name" : apic_user,
+				"pwd" : apic_pwd
+			}
+		}
+	}
+	resp = s.post(login_url, json=payload, verify=False)
+	resp_json = resp.json()
+	token = resp_json['imdata'][0]['aaaLogin']['attributes']['token']
+	cookie = {'APIC-cookie':token}
+        
 
 # Input
 class_names = ['fvRsPathAtt', 'l3extRsPathL3OutAtt']
-
-
-# Login
-BASE_URL = 'https://' + apic_ip + '/api'
-login_url = f'{BASE_URL}/aaaLogin.json'
-
-s = requests.Session()
-
-payload = {
-	"aaaUser" : {
-		"attributes" : {
-			"name" : apic_user,
-			"pwd" : apic_pwd
-		}
-	}
-}
-
-resp = s.post(login_url, json=payload, verify=False)
-resp_json = resp.json()
-token = resp_json['imdata'][0]['aaaLogin']['attributes']['token']
-cookie = {'APIC-cookie':token}
-#print(token)
 
 
 # Function to query fvRsPathAtt
@@ -90,6 +98,9 @@ def aci_query_l3out(url, class_name, cookie):
 
 
 ###
+
+interactive_pwd()
+get_apic_token(BASE_URL, apic_user, apic_pwd)
 
 if os.path.exists("vlans.log"):
   os.remove("vlans.log")

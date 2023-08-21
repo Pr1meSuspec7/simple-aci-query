@@ -43,6 +43,7 @@ apic_ip: "apic_ip_or_hostname"
 apic_user: "apic_username"
 apic_pwd: "apic_password"
 ```
+>NOTE: You can omit the password for security. Password will be prompted during script execution.
 
 After that you can run this command for help:
 ```sh
@@ -97,3 +98,7 @@ Simply by running the command
 $ python aci-all-vlans-py
 ```
 you will find all the vlans actually used by all EPGs and L3Outs. This list will be saved in the vlans.log file.
+
+
+### MIT License
+Feel free to edit, improve and share
