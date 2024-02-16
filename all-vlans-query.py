@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import requests, json, yaml, os
+import requests, json, yaml, os, re
 from getpass import getpass
 requests.urllib3.disable_warnings()
 
@@ -62,21 +62,23 @@ class_names = ['fvRsPathAtt', 'l3extRsPathL3OutAtt']
 
 # Function to query fvRsPathAtt
 def aci_query_staticbind(url, class_name, cookie):
-	r_get = requests.get(url + '/node/class/' + class_name + '.json', cookies=cookie, verify=False)
-	get_json = r_get.json()
-	json_formatted_str = json.dumps(get_json['imdata'], indent=2)
-	list_encap = []
-	for item in get_json['imdata']:
-		list_encap.append(item['fvRsPathAtt']['attributes']['encap'])
-	list_encap_unique = set(list_encap)
+    r_get = requests.get(url + '/node/class/' + class_name + '.json', cookies=cookie, verify=False)
+    get_json = r_get.json()
+    json_formatted_str = json.dumps(get_json['imdata'], indent=2)
+    list_encap = []
+    for item in get_json['imdata']:
+         list_encap.append(item['fvRsPathAtt']['attributes']['encap'] + ' -> ' + re.search("(?<=epg-)((?!/).)*" ,item['fvRsPathAtt']['attributes']['dn']).group())
+         #list_encap.append(item['fvRsPathAtt']['attributes']['encap'])
+    list_encap_unique = set(list_encap)
 	#string_encap_unique = ', '.join(list_encap_unique)
-	string_encap_unique = ', '.join(sorted(list_encap_unique))
-	string_encap_unique = string_encap_unique.replace(', ', '\n')
-	string_encap_unique = string_encap_unique.replace('vlan-', '')
-	log_file = open("vlans.log", "a")
-	log_file.write("*** Vlan used by EPGs:\n")
-	log_file.write(string_encap_unique)
-	log_file.write("\n\n")
+    string_encap_unique = ', '.join(sorted(list_encap_unique))
+    string_encap_unique = string_encap_unique.replace(', ', '\n')
+    string_encap_unique = string_encap_unique.replace('vlan-', '')
+    log_file = open("vlans.log", "a")
+    log_file.write("*** Vlan used by EPGs:\n")
+    log_file.write(string_encap_unique)
+    log_file.write("\n\n")
+
 
 # Function to query l3extRsPathL3OutAtt
 def aci_query_l3out(url, class_name, cookie):
@@ -85,7 +87,8 @@ def aci_query_l3out(url, class_name, cookie):
 	json_formatted_str = json.dumps(get_json['imdata'], indent=2)
 	list_encap = []
 	for item in get_json['imdata']:
-		list_encap.append(item['l3extRsPathL3OutAtt']['attributes']['encap'])
+		list_encap.append(item['l3extRsPathL3OutAtt']['attributes']['encap'] + ' -> ' + re.search("(?<=out-)((?!/).)*" ,item['l3extRsPathL3OutAtt']['attributes']['dn']).group())
+        #list_encap.append(item['l3extRsPathL3OutAtt']['attributes']['encap'])
 	list_encap_unique = set(list_encap)
 	string_encap_unique = ', '.join(sorted(list_encap_unique))
 	string_encap_unique = string_encap_unique.replace(', ', '\n')
