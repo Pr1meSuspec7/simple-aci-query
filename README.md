@@ -47,9 +47,9 @@ apic_pwd: "apic_password"
 
 After that you can run this command for help:
 ```sh
-$ python simple-aci-query.py -h
+$ python query-general.py -h
 
-usage: simple-aci-query.py [-h] -c CLASS_NAME [-p PROPERTY_NAME] [-f FILTER_NAME]
+usage: query-general.py [-h] -c CLASS_NAME [-p PROPERTY_NAME] [-f FILTER_NAME]
 
 Simple script to run ACI moquery
 
@@ -73,17 +73,17 @@ Each output will be saved in the output.log file.
 
 This command query all Tenants:
 ```sh
-$ python simple-aci-query.py -c fvTenant
+$ python query-general.py -c fvTenant
 ```
 
 This command query the Tenant named "Test-Tenant":
 ```sh
-$ python simple-aci-query.py -c fvTenant -p name -f Test-Tenant
+$ python query-general.py -c fvTenant -p name -f Test-Tenant
 ```
 
 This command query all interfaces with "esx or ESX" in the "description" field:
 ```sh
-$ python simple-aci-query.py -c l1PhysIf -p descr -f "esx|ESX"
+$ python query-general.py -c l1PhysIf -p descr -f "esx|ESX"
 ```
 >NOTE: When using a regex for the filter, include it between double quotes.
 
