@@ -7,6 +7,8 @@ import sys
 import argparse
 import pandas as pd
 import os
+import re
+import time
 from getpass import getpass
 from UliPlot.XLSX import auto_adjust_xlsx_column_width
 requests.urllib3.disable_warnings()
@@ -68,6 +70,7 @@ def get_apic_token(url, apic_user, apic_pwd):
 	cookie = {'APIC-cookie':token}
 	return cookie
 
+########################
 
 # Function to query interfaces
 def aci_query(url, pod_id, leaf_id, cookie):

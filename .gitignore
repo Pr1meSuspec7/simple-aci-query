@@ -1,2 +1,4 @@
 _old/
 venv*
+*.xlsx
+*.log

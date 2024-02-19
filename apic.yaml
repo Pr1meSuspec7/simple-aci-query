@@ -1,5 +1,5 @@
 # Fill apic_pwd to skip interactive input
 ---
 apic_ip: "172.31.70.31"
-apic_user: "userlocal-aci-ntt-001"
+apic_user: "userlocal"
 apic_pwd: ""
