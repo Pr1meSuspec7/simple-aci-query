@@ -3,12 +3,9 @@
 import requests
 import json
 import yaml
-import sys
 import argparse
 import pandas as pd
 import os
-import re
-import time
 from getpass import getpass
 from UliPlot.XLSX import auto_adjust_xlsx_column_width
 requests.urllib3.disable_warnings()

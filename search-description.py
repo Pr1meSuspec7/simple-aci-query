@@ -3,13 +3,18 @@
 import requests
 import json
 import yaml
-import pandas as pd
-import os
+import argparse
 import re
-import time
 from getpass import getpass
 from UliPlot.XLSX import auto_adjust_xlsx_column_width
 requests.urllib3.disable_warnings()
+from prettytable import PrettyTable
+
+
+# Argument definitions
+parser = argparse.ArgumentParser(description='Script to search interface description. *** Required ACI 5.2 or above ***')
+parser.add_argument('-d', '--description', type=str, help='String to search. You can use pipe "|" to search more strings.', required=True)
+args = parser.parse_args()
 
 
 # Function to ask password
@@ -63,14 +68,14 @@ def get_apic_token(url, apic_user, apic_pwd):
 
 ########################
 
-# Function to query interfaces
-def aci_query(url, cookie):
-    r_get = requests.get(url + '/node/class/infraPortBlk.json?&order-by=infraPortBlk.modTs|desc&order-by=infraPortBlk.dn|asc', cookies=cookie, verify=False)
+# Function to query description
+def aci_query(url, description, cookie):
+    r_get = requests.get(url + '/node/class/infraPortSummary.json?query-target-filter=and(wcard(infraPortSummary.description,"' + description + '"))&order-by=infraPortSummary.description|desc', cookies=cookie, verify=False)
     get_json = r_get.json()
     get_json = [i for i in get_json['imdata']]
     #get_json = [i['l1PhysIf']['attributes'] for i in get_json['imdata']]
     formatted_str = json.dumps(get_json, indent=4)
-    print(formatted_str)
+    #print(formatted_str)
     log_file = open("output.log", "w")
     log_file.write(formatted_str)
     log_file.write("\n")
@@ -82,41 +87,32 @@ def extract_data(imdata):
     dict = {}
     list_of_dict = []
     for i in imdata:
-        dict['SWITCH']=re.search("(?<=accportprof-)((?!\_).)*" ,i['infraPortBlk']['attributes']['dn']).group()
-        dict['POLICY_GROUP']=re.search("(?<=hports-)((?!-typ-range).)*" ,i['infraPortBlk']['attributes']['dn']).group()
-        dict['FROM_PORT']=(i['infraPortBlk']['attributes']['fromPort'])
-        dict['TO_PORT']=(i['infraPortBlk']['attributes']['toPort'])
-        dict['DESCRIPTION']=(i['infraPortBlk']['attributes']['descr'])
+        dict['POD']=(i['infraPortSummary']['attributes']['pod'])
+        dict['NODE']=(i['infraPortSummary']['attributes']['node'])
+        dict['INTERFACE']=re.findall('eth\S+(?=])', (i['infraPortSummary']['attributes']['portDn']))[0]
+        dict['SHUTDOWN']=(i['infraPortSummary']['attributes']['shutdown'])
+        dict['PORT MODE']=(i['infraPortSummary']['attributes']['mode'])
+        dict['POLICY GROUP']=re.findall('(?<=accbundle-|ccportgrp-)\S+', (i['infraPortSummary']['attributes']['assocGrp']))[0]
+        dict['DESCRIPTION']=(i['infraPortSummary']['attributes']['description'])
         list_of_dict.append(dict.copy())
     return list_of_dict
 
 
-# Function to create excel file
-def query_to_excel(structure):
-    timestr = time.strftime("%Y%m%d-%H%M%S")
-    df = pd.DataFrame(data=structure)
-    if os.path.exists('infraPortBlk__' + timestr + '.xlsx'):
-        with pd.ExcelWriter('infraPortBlk__' + timestr + '.xlsx', mode='a') as writer:
-            df.to_excel(writer, index=False, sheet_name='Sheet_1')
-            for column in df:
-                column_length = max(df[column].astype(str).map(len).max(), len(str(column)))
-                col_idx = df.columns.get_loc(column)
-                writer.sheets['Sheet_1'].column_dimensions[chr(65+col_idx)].width = column_length + 2
-    else:
-        with pd.ExcelWriter('infraPortBlk__' + timestr + '.xlsx') as writer:
-            df.to_excel(writer, index=False, sheet_name='Sheet_1')
-            for column in df:
-                column_length = max(df[column].astype(str).map(len).max(), len(str(column)))
-                col_idx = df.columns.get_loc(column)
-                writer.sheets['Sheet_1'].column_dimensions[chr(65+col_idx)].width = column_length + 2
+def listDict_to_table(listDict):
+    table = PrettyTable()
+    table.field_names = ['POD','NODE','INTERFACE','ADMIN SHUTDOWN','PORT MODE','POLICY GROUP','DESCRIPTION']
+    for dict in listDict:
+        table.add_row(dict.values())
+    return table
 
 
 ########################
 
-
 #check_property_filter()
 interactive_pwd()
 cookie = get_apic_token(BASE_URL, apic_user, apic_pwd)
-query_response = aci_query(BASE_URL, cookie)
+query_response = aci_query(BASE_URL, args.description, cookie)
 data_extract = extract_data(query_response)
-query_to_excel(data_extract)
+#print(data_extract)
+outputTable = listDict_to_table(data_extract)
+print(outputTable)
