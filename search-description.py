@@ -99,9 +99,16 @@ def extract_data(imdata, imdata2):
         dict['POD']=(i['infraPortSummary']['attributes']['pod'])
         dict['NODE']=(i['infraPortSummary']['attributes']['node'])
         dict['INTERFACE']=re.findall('eth\S+(?=])', (i['infraPortSummary']['attributes']['portDn']))[0]
-        dict['SHUTDOWN']=(i['infraPortSummary']['attributes']['shutdown'])
-        dict['OPER STATUS']=(ii[0]['ethpmPhysIf']['attributes']['operStQual'])
-        dict['PORT MODE']=(i['infraPortSummary']['attributes']['mode'])
+        dict['SHUTDOWN']='shutdown' if (i['infraPortSummary']['attributes']['shutdown']) == 'yes' else 'up'
+        dict['OPER STATUS']=(ii[0]['ethpmPhysIf']['attributes']['operSt'])
+        dict['OPER REASON']=(ii[0]['ethpmPhysIf']['attributes']['operStQual'])
+        #dict['OPER STATUS']=(ii[0]['ethpmPhysIf']['attributes']['operStQual']) if (ii[0]['ethpmPhysIf']['attributes']['operStQual']) != 'admin-down' else 'down'
+        if (i['infraPortSummary']['attributes']['mode']) == 'vpc':
+             dict['PORT MODE']='Virtual Port-Channel'
+        elif (i['infraPortSummary']['attributes']['mode']) == 'pc':
+             dict['PORT MODE']='Port-Channel'
+        else:
+             dict['PORT MODE']='Individual'
         dict['POLICY GROUP']=re.findall('(?<=accbundle-|ccportgrp-)\S+', (i['infraPortSummary']['attributes']['assocGrp']))[0]
         dict['DESCRIPTION']=(i['infraPortSummary']['attributes']['description'])
         list_of_dict.append(dict.copy())
@@ -110,7 +117,7 @@ def extract_data(imdata, imdata2):
 
 def listDict_to_table(listDict):
     table = PrettyTable()
-    table.field_names = ['POD','NODE','INTERFACE','ADMIN SHUTDOWN','OPER STATUS','PORT MODE','POLICY GROUP','DESCRIPTION']
+    table.field_names = ['POD','NODE','INTERFACE','ADMIN STATUS','OPER STATUS','OPER REASON','PORT MODE','POLICY GROUP','DESCRIPTION']
     for dict in listDict:
         table.add_row(dict.values())
     return table
