@@ -81,16 +81,26 @@ def aci_query(url, description, cookie):
     log_file.write("\n")
     return get_json
 
+# Function to query operStQual
+def aci_query_operStQual(url, pod, node, interface, cookie):
+    r_get = requests.get(url + '/node/mo/topology/pod-' + pod + '/node-' + node + '/sys/phys-[' + interface + '].json?query-target=children', cookies=cookie, verify=False)
+    get_json = r_get.json()
+    get_json = [i for i in get_json['imdata']]
+    formatted_str = json.dumps(get_json, indent=4)
+    #print(formatted_str)
+    return get_json
 
-# Function to extract data
-def extract_data(imdata):
+
+# Function to extract data and combine dictionary
+def extract_data(imdata, imdata2):
     dict = {}
     list_of_dict = []
-    for i in imdata:
+    for i, ii in zip(imdata, imdata2):
         dict['POD']=(i['infraPortSummary']['attributes']['pod'])
         dict['NODE']=(i['infraPortSummary']['attributes']['node'])
         dict['INTERFACE']=re.findall('eth\S+(?=])', (i['infraPortSummary']['attributes']['portDn']))[0]
         dict['SHUTDOWN']=(i['infraPortSummary']['attributes']['shutdown'])
+        dict['OPER STATUS']=(ii[0]['ethpmPhysIf']['attributes']['operStQual'])
         dict['PORT MODE']=(i['infraPortSummary']['attributes']['mode'])
         dict['POLICY GROUP']=re.findall('(?<=accbundle-|ccportgrp-)\S+', (i['infraPortSummary']['attributes']['assocGrp']))[0]
         dict['DESCRIPTION']=(i['infraPortSummary']['attributes']['description'])
@@ -100,7 +110,7 @@ def extract_data(imdata):
 
 def listDict_to_table(listDict):
     table = PrettyTable()
-    table.field_names = ['POD','NODE','INTERFACE','ADMIN SHUTDOWN','PORT MODE','POLICY GROUP','DESCRIPTION']
+    table.field_names = ['POD','NODE','INTERFACE','ADMIN SHUTDOWN','OPER STATUS','PORT MODE','POLICY GROUP','DESCRIPTION']
     for dict in listDict:
         table.add_row(dict.values())
     return table
@@ -108,11 +118,16 @@ def listDict_to_table(listDict):
 
 ########################
 
-#check_property_filter()
 interactive_pwd()
 cookie = get_apic_token(BASE_URL, apic_user, apic_pwd)
 query_response = aci_query(BASE_URL, args.description, cookie)
-data_extract = extract_data(query_response)
+
+# This for loop makes other query to ethpmPhysIf based on interfaces in query_response
+operStQual = []
+for i in query_response:
+	operStQual.append(aci_query_operStQual(BASE_URL, i['infraPortSummary']['attributes']['pod'], i['infraPortSummary']['attributes']['node'], re.findall('eth\S+(?=])', (i['infraPortSummary']['attributes']['portDn']))[0], cookie))
+
+data_extract = extract_data(query_response, operStQual)
 #print(data_extract)
 outputTable = listDict_to_table(data_extract)
 print(outputTable)
