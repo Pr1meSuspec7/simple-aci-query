@@ -126,7 +126,12 @@ def extract_data(imdata, imdata2, imdata3):
         dict['POLICY GROUP']=re.findall('(?<=accbundle-|ccportgrp-)\S+', (i['infraPortSummary']['attributes']['assocGrp']))[0]
         dict['DESCRIPTION']=(i['infraPortSummary']['attributes']['description'])
         for iii in imdata3:
-            list_of_epgs.append(str(re.findall('tn-\S+(?=/rspat)', (iii['fvRsPathAtt']['attributes']['dn']))) + ' -> ' + str((iii['fvRsPathAtt']['attributes']['mode'])))
+            if (iii['fvRsPathAtt']['attributes']['mode']) == 'regular':
+                list_of_epgs.append(str(re.findall('tn-\S+(?=/rspat)', (iii['fvRsPathAtt']['attributes']['dn']))) + ' -> ' + str('trunk'))
+            elif (iii['fvRsPathAtt']['attributes']['mode']) == 'untagged':
+                list_of_epgs.append(str(re.findall('tn-\S+(?=/rspat)', (iii['fvRsPathAtt']['attributes']['dn']))) + ' -> ' + str('access'))
+            else:
+                list_of_epgs.append(str(re.findall('tn-\S+(?=/rspat)', (iii['fvRsPathAtt']['attributes']['dn']))) + ' -> ' + str((iii['fvRsPathAtt']['attributes']['mode'])))
         dict['EPGs']=list_of_epgs
         list_of_dict.append(dict.copy())
     return list_of_dict
