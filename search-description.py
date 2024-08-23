@@ -17,8 +17,8 @@ parser.add_argument('-d', '--description', type=str, help='String to search. You
 args = parser.parse_args()
 
 
-# Function to ask password
 def interactive_pwd():
+    '''Function to ask password if not set'''
     global apic_pwd
     if apic_pwd == "" or apic_pwd == None:
           apic_pwd = getpass("Insert APIC password for user " + apic_user +": ")
@@ -26,8 +26,8 @@ def interactive_pwd():
           pass
     
 
-# Function to convert yaml to json
 def yaml_to_json(file):
+    '''Function to convert yaml to json'''
     with open(file, "r") as stream:
         try:
             parsed_yaml=yaml.safe_load(stream)
@@ -48,28 +48,28 @@ apic_pwd = apic_vars['apic_pwd']
 BASE_URL = 'https://' + apic_ip + '/api'
 
 
-# Get APIC Token
 def get_apic_token(url, apic_user, apic_pwd):
-	login_url = f'{url}/aaaLogin.json'
-	s = requests.Session()
-	payload = {
-		"aaaUser" : {
-			"attributes" : {
-				"name" : apic_user,
-				"pwd" : apic_pwd
-			}
-		}
-	}
-	resp = s.post(login_url, json=payload, verify=False)
-	resp_json = resp.json()
-	token = resp_json['imdata'][0]['aaaLogin']['attributes']['token']
-	cookie = {'APIC-cookie':token}
-	return cookie
+    ''' Get APIC Token'''
+    login_url = f'{url}/aaaLogin.json'
+    s = requests.Session()
+    payload = {
+         "aaaUser" : {
+              "attributes" : {
+                   "name" : apic_user,
+                   "pwd" : apic_pwd
+               }
+           }
+       }
+    resp = s.post(login_url, json=payload, verify=False)
+    resp_json = resp.json()
+    token = resp_json['imdata'][0]['aaaLogin']['attributes']['token']
+    cookie = {'APIC-cookie':token}
+    return cookie
 
 ########################
 
-# Function to query description
 def aci_query(url, description, cookie):
+    '''Function to query interface description'''
     r_get = requests.get(url + '/node/class/infraPortSummary.json?query-target-filter=and(wcard(infraPortSummary.description,"' + description + '"))&order-by=infraPortSummary.description|desc', cookies=cookie, verify=False)
     get_json = r_get.json()
     get_json = [i for i in get_json['imdata']]
@@ -81,8 +81,8 @@ def aci_query(url, description, cookie):
     log_file.write("\n")
     return get_json
 
-# Function to query operStQual
 def aci_query_operStQual(url, pod, node, interface, cookie):
+    '''Function to query operStQual'''
     r_get = requests.get(url + '/node/mo/topology/pod-' + pod + '/node-' + node + '/sys/phys-[' + interface + '].json?query-target=children', cookies=cookie, verify=False)
     get_json = r_get.json()
     get_json = [i for i in get_json['imdata']]
@@ -91,8 +91,8 @@ def aci_query_operStQual(url, pod, node, interface, cookie):
     return get_json
 
 
-# Function to extract data and combine dictionary
 def extract_data(imdata, imdata2):
+    '''Function to extract data and combine dictionary'''
     dict = {}
     list_of_dict = []
     for i, ii in zip(imdata, imdata2):
@@ -116,6 +116,7 @@ def extract_data(imdata, imdata2):
 
 
 def listDict_to_table(listDict):
+    '''Function to create table'''
     table = PrettyTable()
     table.field_names = ['POD','NODE','INTERFACE','ADMIN STATUS','OPER STATUS','OPER REASON','PORT MODE','POLICY GROUP','DESCRIPTION']
     for dict in listDict:
