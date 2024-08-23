@@ -13,7 +13,7 @@ from prettytable import PrettyTable
 
 # Argument definitions
 parser = argparse.ArgumentParser(description='Script to search interface description. *** Required ACI 5.2 or above ***')
-parser.add_argument('-d', '--description', type=str, help='String to search. You can use pipe "|" to search more strings.', required=True)
+parser.add_argument('-d', '--description', type=str, help='String to search.', required=True)
 args = parser.parse_args()
 
 
@@ -68,7 +68,7 @@ def get_apic_token(url, apic_user, apic_pwd):
 
 ########################
 
-def aci_query(url, description, cookie):
+def aci_query_infraPortSummary(url, description, cookie):
     '''Function to query interface description'''
     r_get = requests.get(url + '/node/class/infraPortSummary.json?query-target-filter=and(wcard(infraPortSummary.description,"' + description + '"))&order-by=infraPortSummary.description|desc', cookies=cookie, verify=False)
     get_json = r_get.json()
@@ -90,12 +90,21 @@ def aci_query_operStQual(url, pod, node, interface, cookie):
     #print(formatted_str)
     return get_json
 
+def aci_query_fvRsPathAtt(url, portDn, cookie):
+    '''Function to query fvRsPathAtt'''
+    r_get = requests.get(url + '/node/class/fvRsPathAtt.json?query-target-filter=and(eq(fvRsPathAtt.tDn,"' + portDn + '"))&order-by=fvRsPathAtt.modTs|desc', cookies=cookie, verify=False)
+    get_json = r_get.json()
+    get_json = [i for i in get_json['imdata']]
+    formatted_str = json.dumps(get_json, indent=4)
+    #print(formatted_str)
+    return get_json
 
-def extract_data(imdata, imdata2):
+def extract_data(imdata, imdata2, imdata3):
     '''Function to extract data and combine dictionary'''
     dict = {}
     list_of_dict = []
     for i, ii in zip(imdata, imdata2):
+        list_of_epgs = []
         dict['POD']=(i['infraPortSummary']['attributes']['pod'])
         dict['NODE']=(i['infraPortSummary']['attributes']['node'])
         dict['INTERFACE']=re.findall('eth\S+(?=])', (i['infraPortSummary']['attributes']['portDn']))[0]
@@ -111,31 +120,45 @@ def extract_data(imdata, imdata2):
              dict['PORT MODE']='Individual'
         dict['POLICY GROUP']=re.findall('(?<=accbundle-|ccportgrp-)\S+', (i['infraPortSummary']['attributes']['assocGrp']))[0]
         dict['DESCRIPTION']=(i['infraPortSummary']['attributes']['description'])
+        for iii in imdata3:
+            list_of_epgs.append(re.findall('tn-\S+(?=/rspat)', (iii['fvRsPathAtt']['attributes']['dn'])))
+        dict['EPGs']=list_of_epgs
         list_of_dict.append(dict.copy())
     return list_of_dict
-
 
 def listDict_to_table(listDict):
     '''Function to create table'''
     table = PrettyTable()
-    table.field_names = ['POD','NODE','INTERFACE','ADMIN STATUS','OPER STATUS','OPER REASON','PORT MODE','POLICY GROUP','DESCRIPTION']
+    table._max_width = {"EPGs" : 40}
+    table.field_names = ['POD','NODE','INTERFACE','ADMIN STATUS','OPER STATUS','OPER REASON','PORT MODE','POLICY GROUP','DESCRIPTION', 'EPGs']
     for dict in listDict:
         table.add_row(dict.values())
     return table
-
 
 ########################
 
 interactive_pwd()
 cookie = get_apic_token(BASE_URL, apic_user, apic_pwd)
-query_response = aci_query(BASE_URL, args.description, cookie)
+query_response_infraPortSummary = aci_query_infraPortSummary(BASE_URL, args.description, cookie)
 
-# This for loop makes other query to ethpmPhysIf based on interfaces in query_response
-operStQual = []
-for i in query_response:
-	operStQual.append(aci_query_operStQual(BASE_URL, i['infraPortSummary']['attributes']['pod'], i['infraPortSummary']['attributes']['node'], re.findall('eth\S+(?=])', (i['infraPortSummary']['attributes']['portDn']))[0], cookie))
+# Stop script if no results
+if len(query_response_infraPortSummary) == 0:
+    print('\nNo results\n')
+    exit()
+else:
+    pass
 
-data_extract = extract_data(query_response, operStQual)
+# This for loop makes other query to ethpmPhysIf and vRsPathAtt based on interfaces in query_response_infraPortSummary
+query_response_operStQual = []
+query_response_vRsPathAtt = []
+for i in query_response_infraPortSummary:
+    query_response_operStQual.append(aci_query_operStQual(BASE_URL, i['infraPortSummary']['attributes']['pod'], i['infraPortSummary']['attributes']['node'], re.findall('eth\S+(?=])', (i['infraPortSummary']['attributes']['portDn']))[0], cookie))
+    if i['infraPortSummary']['attributes']['mode'] == 'pc' or i['infraPortSummary']['attributes']['mode'] == 'vpc':
+        query_response_vRsPathAtt.append(aci_query_fvRsPathAtt(BASE_URL, i['infraPortSummary']['attributes']['pcPortDn'], cookie))
+    else:
+        query_response_vRsPathAtt.append(aci_query_fvRsPathAtt(BASE_URL, i['infraPortSummary']['attributes']['portDn'], cookie))
+
+data_extract = extract_data(query_response_infraPortSummary, query_response_operStQual, query_response_vRsPathAtt[0])
 #print(data_extract)
 outputTable = listDict_to_table(data_extract)
 print(outputTable)
