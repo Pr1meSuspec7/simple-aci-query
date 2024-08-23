@@ -13,12 +13,7 @@ from prettytable import PrettyTable
 
 # Argument definitions
 parser = argparse.ArgumentParser(description='Script to search interface description. *** Required ACI 5.2 or above ***')
-group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument('-d', '--description', type=str, help='String to search.')
-# TODO:
-# Usare -l per permettere di inserire una lista di descrizioni così da poterle ciclare
-# per risolvere il problema degli static path
-group.add_argument('-l', '--list', type=str, help='List of strings to search.')
+parser.add_argument('-d', '--description', type=str, help='String to search.', required=True)
 args = parser.parse_args()
 
 
@@ -126,7 +121,7 @@ def extract_data(imdata, imdata2, imdata3):
         dict['POLICY GROUP']=re.findall('(?<=accbundle-|ccportgrp-)\S+', (i['infraPortSummary']['attributes']['assocGrp']))[0]
         dict['DESCRIPTION']=(i['infraPortSummary']['attributes']['description'])
         for iii in imdata3:
-            list_of_epgs.append(str(re.findall('tn-\S+(?=/rspat)', (iii['fvRsPathAtt']['attributes']['dn']))) + ' -> ' + str((iii['fvRsPathAtt']['attributes']['mode'])))
+            list_of_epgs.append(re.findall('tn-\S+(?=/rspat)', (iii['fvRsPathAtt']['attributes']['dn'])))
         dict['EPGs']=list_of_epgs
         list_of_dict.append(dict.copy())
     return list_of_dict
@@ -134,7 +129,7 @@ def extract_data(imdata, imdata2, imdata3):
 def listDict_to_table(listDict):
     '''Function to create table'''
     table = PrettyTable()
-    table._max_width = {"EPGs" : 50}
+    table._max_width = {"EPGs" : 40}
     table.field_names = ['POD','NODE','INTERFACE','ADMIN STATUS','OPER STATUS','OPER REASON','PORT MODE','POLICY GROUP','DESCRIPTION', 'EPGs']
     for dict in listDict:
         table.add_row(dict.values())
