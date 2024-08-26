@@ -25,7 +25,7 @@ def interactive_pwd():
           apic_pwd = getpass("Insert APIC password for user " + apic_user +": ")
     else:
           pass
-    
+
 
 def yaml_to_json(file):
     '''Function to convert yaml to json'''
@@ -40,9 +40,6 @@ def yaml_to_json(file):
 
 # Import APIC vars
 apic_vars = yaml_to_json("apic.yaml")
-
-
-# APIC
 apic_ip = apic_vars['apic_ip']
 apic_user = apic_vars['apic_user']
 apic_pwd = apic_vars['apic_pwd']
@@ -71,7 +68,8 @@ def get_apic_token(url, apic_user, apic_pwd):
 
 def aci_query_infraPortSummary(url, description, cookie):
     '''Function to query interface description'''
-    r_get = requests.get(url + '/node/class/infraPortSummary.json?query-target-filter=and(wcard(infraPortSummary.description,"' + description + '"))&order-by=infraPortSummary.description|desc', cookies=cookie, verify=False)
+    r_get = requests.get(f'{url}/node/class/infraPortSummary.json?query-target-filter=and(wcard(infraPortSummary.description,"{description}"))&order-by=infraPortSummary.description|desc',
+                         cookies=cookie, verify=False)
     get_json = r_get.json()
     get_json = [i for i in get_json['imdata']]
     #get_json = [i['l1PhysIf']['attributes'] for i in get_json['imdata']]
@@ -84,7 +82,8 @@ def aci_query_infraPortSummary(url, description, cookie):
 
 def aci_query_operStQual(url, pod, node, interface, cookie):
     '''Function to query operStQual'''
-    r_get = requests.get(url + '/node/mo/topology/pod-' + pod + '/node-' + node + '/sys/phys-[' + interface + '].json?query-target=children', cookies=cookie, verify=False)
+    r_get = requests.get(f'{url}/node/mo/topology/pod-{pod}/node-{node}/sys/phys-[{interface}].json?query-target=children',
+                         cookies=cookie, verify=False)
     get_json = r_get.json()
     get_json = [i for i in get_json['imdata']]
     formatted_str = json.dumps(get_json, indent=4)
@@ -93,7 +92,8 @@ def aci_query_operStQual(url, pod, node, interface, cookie):
 
 def aci_query_fvRsPathAtt(url, portDn, cookie):
     '''Function to query fvRsPathAtt'''
-    r_get = requests.get(url + '/node/class/fvRsPathAtt.json?query-target-filter=and(eq(fvRsPathAtt.tDn,"' + portDn + '"))&order-by=fvRsPathAtt.modTs|desc', cookies=cookie, verify=False)
+    r_get = requests.get(f'{url}/node/class/fvRsPathAtt.json?query-target-filter=and(eq(fvRsPathAtt.tDn,"{portDn}"))&order-by=fvRsPathAtt.modTs|desc',
+                         cookies=cookie, verify=False)
     get_json = r_get.json()
     get_json = [i for i in get_json['imdata']]
     formatted_str = json.dumps(get_json, indent=4)
@@ -112,7 +112,6 @@ def extract_data(imdata, imdata2, imdata3):
         dict['SHUTDOWN']='shutdown' if (i['infraPortSummary']['attributes']['shutdown']) == 'yes' else 'up'
         dict['OPER STATUS']=(ii[0]['ethpmPhysIf']['attributes']['operSt'])
         dict['OPER REASON']=(ii[0]['ethpmPhysIf']['attributes']['operStQual'])
-        #dict['OPER STATUS']=(ii[0]['ethpmPhysIf']['attributes']['operStQual']) if (ii[0]['ethpmPhysIf']['attributes']['operStQual']) != 'admin-down' else 'down'
         if (i['infraPortSummary']['attributes']['mode']) == 'vpc':
              dict['PORT MODE']='Virtual Port-Channel'
         elif (i['infraPortSummary']['attributes']['mode']) == 'pc':
@@ -123,11 +122,17 @@ def extract_data(imdata, imdata2, imdata3):
         dict['DESCRIPTION']=(i['infraPortSummary']['attributes']['description'])
         for iii in imdata3:
             if (iii['fvRsPathAtt']['attributes']['mode']) == 'regular':
-                list_of_epgs.append(str(re.findall('tn-\S+(?=/rspat)', (iii['fvRsPathAtt']['attributes']['dn']))) + ' -> ' + str('trunk'))
+                list_of_epgs.append(str(re.findall('tn-\S+(?=/rspat)',
+                                                   (iii['fvRsPathAtt']['attributes']['dn'])))
+                                                   + ' -> ' + str('trunk'))
             elif (iii['fvRsPathAtt']['attributes']['mode']) == 'untagged':
-                list_of_epgs.append(str(re.findall('tn-\S+(?=/rspat)', (iii['fvRsPathAtt']['attributes']['dn']))) + ' -> ' + str('access'))
+                list_of_epgs.append(str(re.findall('tn-\S+(?=/rspat)', 
+                                                   (iii['fvRsPathAtt']['attributes']['dn'])))
+                                                   + ' -> ' + str('access'))
             else:
-                list_of_epgs.append(str(re.findall('tn-\S+(?=/rspat)', (iii['fvRsPathAtt']['attributes']['dn']))) + ' -> ' + str((iii['fvRsPathAtt']['attributes']['mode'])))
+                list_of_epgs.append(str(re.findall('tn-\S+(?=/rspat)',
+                                                   (iii['fvRsPathAtt']['attributes']['dn'])))
+                                                   + ' -> ' + str((iii['fvRsPathAtt']['attributes']['mode'])))
         dict['EPGs']=list_of_epgs
         list_of_dict.append(dict.copy())
     return list_of_dict
@@ -146,14 +151,14 @@ def listDict_to_table(listDict):
 interactive_pwd()
 cookie = get_apic_token(BASE_URL, apic_user, apic_pwd)
 
-#
+# Make a different query ofr each description
 for descr in args.description.split(','):
     query_response_infraPortSummary = aci_query_infraPortSummary(BASE_URL, descr, cookie)
 
-    # Stop script if no results
+    # Go to next iteration if no results
     if len(query_response_infraPortSummary) == 0:
-        print('\nNo results for -> ' + descr + '\n')
-        #exit()
+        #print('\nNo results for -> ' + descr + '\n')
+        print(f'\nNo results for -> {descr}\n')
         continue
     else:
         pass
@@ -162,7 +167,9 @@ for descr in args.description.split(','):
     query_response_operStQual = []
     query_response_vRsPathAtt = []
     for i in query_response_infraPortSummary:
-        query_response_operStQual.append(aci_query_operStQual(BASE_URL, i['infraPortSummary']['attributes']['pod'], i['infraPortSummary']['attributes']['node'], re.findall('eth\S+(?=])', (i['infraPortSummary']['attributes']['portDn']))[0], cookie))
+        query_response_operStQual.append(aci_query_operStQual(BASE_URL, i['infraPortSummary']['attributes']['pod'],
+                                                              i['infraPortSummary']['attributes']['node'], re.findall('eth\S+(?=])',
+                                                                (i['infraPortSummary']['attributes']['portDn']))[0], cookie))
         if i['infraPortSummary']['attributes']['mode'] == 'pc' or i['infraPortSummary']['attributes']['mode'] == 'vpc':
             query_response_vRsPathAtt.append(aci_query_fvRsPathAtt(BASE_URL, i['infraPortSummary']['attributes']['pcPortDn'], cookie))
         else:
