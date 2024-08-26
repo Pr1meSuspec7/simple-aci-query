@@ -13,12 +13,8 @@ from prettytable import PrettyTable
 
 # Argument definitions
 parser = argparse.ArgumentParser(description='Script to search interface description. *** Required ACI 5.2 or above ***')
-group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument('-d', '--description', type=str, help='String to search.')
-# TODO:
-# Usare -l per permettere di inserire una lista di descrizioni così da poterle ciclare
-# per risolvere il problema degli static path
-group.add_argument('-l', '--list', type=str, help='List of strings to search.')
+parser.add_argument('-d', '--description', type=str, help='String to search. Use comma "," to search multiple strings. Example:\
+                    python search-description.py -d SRV01,SRV02.', required=True)
 args = parser.parse_args()
 
 
@@ -149,26 +145,30 @@ def listDict_to_table(listDict):
 
 interactive_pwd()
 cookie = get_apic_token(BASE_URL, apic_user, apic_pwd)
-query_response_infraPortSummary = aci_query_infraPortSummary(BASE_URL, args.description, cookie)
 
-# Stop script if no results
-if len(query_response_infraPortSummary) == 0:
-    print('\nNo results\n')
-    exit()
-else:
-    pass
+#
+for descr in args.description.split(','):
+    query_response_infraPortSummary = aci_query_infraPortSummary(BASE_URL, descr, cookie)
 
-# This for loop makes other query to ethpmPhysIf and vRsPathAtt based on interfaces in query_response_infraPortSummary
-query_response_operStQual = []
-query_response_vRsPathAtt = []
-for i in query_response_infraPortSummary:
-    query_response_operStQual.append(aci_query_operStQual(BASE_URL, i['infraPortSummary']['attributes']['pod'], i['infraPortSummary']['attributes']['node'], re.findall('eth\S+(?=])', (i['infraPortSummary']['attributes']['portDn']))[0], cookie))
-    if i['infraPortSummary']['attributes']['mode'] == 'pc' or i['infraPortSummary']['attributes']['mode'] == 'vpc':
-        query_response_vRsPathAtt.append(aci_query_fvRsPathAtt(BASE_URL, i['infraPortSummary']['attributes']['pcPortDn'], cookie))
+    # Stop script if no results
+    if len(query_response_infraPortSummary) == 0:
+        print('\nNo results for -> ' + descr + '\n')
+        #exit()
+        continue
     else:
-        query_response_vRsPathAtt.append(aci_query_fvRsPathAtt(BASE_URL, i['infraPortSummary']['attributes']['portDn'], cookie))
+        pass
 
-data_extract = extract_data(query_response_infraPortSummary, query_response_operStQual, query_response_vRsPathAtt[0])
-#print(data_extract)
-outputTable = listDict_to_table(data_extract)
-print(outputTable)
+    # This for loop makes other query to ethpmPhysIf and vRsPathAtt based on interfaces in query_response_infraPortSummary
+    query_response_operStQual = []
+    query_response_vRsPathAtt = []
+    for i in query_response_infraPortSummary:
+        query_response_operStQual.append(aci_query_operStQual(BASE_URL, i['infraPortSummary']['attributes']['pod'], i['infraPortSummary']['attributes']['node'], re.findall('eth\S+(?=])', (i['infraPortSummary']['attributes']['portDn']))[0], cookie))
+        if i['infraPortSummary']['attributes']['mode'] == 'pc' or i['infraPortSummary']['attributes']['mode'] == 'vpc':
+            query_response_vRsPathAtt.append(aci_query_fvRsPathAtt(BASE_URL, i['infraPortSummary']['attributes']['pcPortDn'], cookie))
+        else:
+            query_response_vRsPathAtt.append(aci_query_fvRsPathAtt(BASE_URL, i['infraPortSummary']['attributes']['portDn'], cookie))
+
+    data_extract = extract_data(query_response_infraPortSummary, query_response_operStQual, query_response_vRsPathAtt[0])
+    #print(data_extract)
+    outputTable = listDict_to_table(data_extract)
+    print(outputTable)
