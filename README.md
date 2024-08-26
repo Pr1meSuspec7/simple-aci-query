@@ -6,10 +6,6 @@ This script helps engineers speed up moqueries on ACI.
 ### Requirements
 
 This script tested on Linux/Windows with python3.10 or higher.  
-The following packages are required:
- - requests
- - PyYAML
-
 It's recommended to crate a virtual environment, activate it and then install the packages:
 
 For Windows:
