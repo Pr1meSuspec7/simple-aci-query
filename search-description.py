@@ -17,8 +17,9 @@ parser.add_argument('-d', '--description', type=str, help='String to search. Use
                     python search-description.py -d SRV01,SRV02.', required=True)
 parser.add_argument('-w', '--maxwidth', type=str, help='Max width of EPGs column. If the EPG column is not well formatted, \
                     try increasing this parameter.', required=False, default='70')
-#args = parser.parse_args()
-args = parser.parse_args(['-d', 'PA-AS-MI-01', '-w', '70'])
+# To run in python terminal invert comment in the next two lines (for debug) 
+args = parser.parse_args()
+# args = parser.parse_args(['-d', 'PA-AS-MI-01', '-w', '70'])
 
 
 def interactive_pwd():
