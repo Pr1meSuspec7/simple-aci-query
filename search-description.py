@@ -15,7 +15,10 @@ from prettytable import PrettyTable
 parser = argparse.ArgumentParser(description='Script to search interface description. *** Required ACI 5.2 or above ***')
 parser.add_argument('-d', '--description', type=str, help='String to search. Use comma "," to search multiple strings. Example:\
                     python search-description.py -d SRV01,SRV02.', required=True)
-args = parser.parse_args()
+parser.add_argument('-w', '--maxwidth', type=str, help='Max width of EPGs column. If the EPG column is not well formatted, \
+                    try increasing this parameter.', required=False, default='70')
+#args = parser.parse_args()
+args = parser.parse_args(['-d', 'PA-AS-MI-01', '-w', '70'])
 
 
 def interactive_pwd():
@@ -110,8 +113,12 @@ def extract_data(imdata, imdata2, imdata3):
         dict['NODE']=(i['infraPortSummary']['attributes']['node'])
         dict['INTERFACE']=re.findall('eth\S+(?=])', (i['infraPortSummary']['attributes']['portDn']))[0]
         dict['SHUTDOWN']='shutdown' if (i['infraPortSummary']['attributes']['shutdown']) == 'yes' else 'up'
-        dict['OPER STATUS']=(ii[0]['ethpmPhysIf']['attributes']['operSt'])
-        dict['OPER REASON']=(ii[0]['ethpmPhysIf']['attributes']['operStQual'])
+        if ii[0].get('ethpmPhysIf') == None:
+            dict['OPER STATUS']=(ii[1]['ethpmPhysIf']['attributes']['operSt'])
+            dict['OPER REASON']=(ii[1]['ethpmPhysIf']['attributes']['operStQual'])
+        else:
+            dict['OPER STATUS']=(ii[0]['ethpmPhysIf']['attributes']['operSt'])
+            dict['OPER REASON']=(ii[0]['ethpmPhysIf']['attributes']['operStQual'])
         if (i['infraPortSummary']['attributes']['mode']) == 'vpc':
              dict['PORT MODE']='Virtual Port-Channel'
         elif (i['infraPortSummary']['attributes']['mode']) == 'pc':
@@ -133,14 +140,15 @@ def extract_data(imdata, imdata2, imdata3):
                 list_of_epgs.append(str(re.findall('tn-\S+(?=/rspat)',
                                                    (iii['fvRsPathAtt']['attributes']['dn'])))
                                                    + ' -> ' + str((iii['fvRsPathAtt']['attributes']['mode'])))
-        dict['EPGs']=list_of_epgs
+        # dict['EPGs']=list_of_epgs
+        dict['EPGs']=' ||\n'.join(list_of_epgs)
         list_of_dict.append(dict.copy())
     return list_of_dict
 
 def listDict_to_table(listDict):
     '''Function to create table'''
     table = PrettyTable()
-    table._max_width = {"EPGs" : 50}
+    table._max_width = {'EPGs' : int(args.maxwidth)}
     table.field_names = ['POD','NODE','INTERFACE','ADMIN STATUS','OPER STATUS','OPER REASON','PORT MODE','POLICY GROUP','DESCRIPTION', 'EPGs']
     for dict in listDict:
         table.add_row(dict.values())
