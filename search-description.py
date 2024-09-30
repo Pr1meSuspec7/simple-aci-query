@@ -112,7 +112,7 @@ def extract_data(imdata, imdata2, imdata3):
         list_of_epgs = []
         dict['POD']=(i['infraPortSummary']['attributes']['pod'])
         dict['NODE']=(i['infraPortSummary']['attributes']['node'])
-        dict['INTERFACE']=re.findall('eth\S+(?=])', (i['infraPortSummary']['attributes']['portDn']))[0]
+        dict['INTERFACE']=re.findall(r'eth\S+(?=])', (i['infraPortSummary']['attributes']['portDn']))[0]
         dict['SHUTDOWN']='shutdown' if (i['infraPortSummary']['attributes']['shutdown']) == 'yes' else 'up'
         if ii[0].get('ethpmPhysIf') == None:
             dict['OPER STATUS']=(ii[1]['ethpmPhysIf']['attributes']['operSt'])
@@ -126,19 +126,19 @@ def extract_data(imdata, imdata2, imdata3):
              dict['PORT MODE']='Port-Channel'
         else:
              dict['PORT MODE']='Individual'
-        dict['POLICY GROUP']=re.findall('(?<=accbundle-|ccportgrp-)\S+', (i['infraPortSummary']['attributes']['assocGrp']))[0]
+        dict['POLICY GROUP']=re.findall(r'(?<=accbundle-|ccportgrp-)\S+', (i['infraPortSummary']['attributes']['assocGrp']))[0]
         dict['DESCRIPTION']=(i['infraPortSummary']['attributes']['description'])
         for iii in imdata3:
             if (iii['fvRsPathAtt']['attributes']['mode']) == 'regular':
-                list_of_epgs.append(str(re.findall('tn-\S+(?=/rspat)',
+                list_of_epgs.append(str(re.findall(r'tn-\S+(?=/rspat)',
                                                    (iii['fvRsPathAtt']['attributes']['dn'])))
                                                    + ' -> ' + str('trunk'))
             elif (iii['fvRsPathAtt']['attributes']['mode']) == 'untagged':
-                list_of_epgs.append(str(re.findall('tn-\S+(?=/rspat)', 
+                list_of_epgs.append(str(re.findall(r'tn-\S+(?=/rspat)', 
                                                    (iii['fvRsPathAtt']['attributes']['dn'])))
                                                    + ' -> ' + str('access'))
             else:
-                list_of_epgs.append(str(re.findall('tn-\S+(?=/rspat)',
+                list_of_epgs.append(str(re.findall(r'tn-\S+(?=/rspat)',
                                                    (iii['fvRsPathAtt']['attributes']['dn'])))
                                                    + ' -> ' + str((iii['fvRsPathAtt']['attributes']['mode'])))
         # dict['EPGs']=list_of_epgs
@@ -177,7 +177,7 @@ for descr in args.description.split(','):
     query_response_vRsPathAtt = []
     for i in query_response_infraPortSummary:
         query_response_operStQual.append(aci_query_operStQual(BASE_URL, i['infraPortSummary']['attributes']['pod'],
-                                                              i['infraPortSummary']['attributes']['node'], re.findall('eth\S+(?=])',
+                                                              i['infraPortSummary']['attributes']['node'], re.findall(r'eth\S+(?=])',
                                                                 (i['infraPortSummary']['attributes']['portDn']))[0], cookie))
         if i['infraPortSummary']['attributes']['mode'] == 'pc' or i['infraPortSummary']['attributes']['mode'] == 'vpc':
             query_response_vRsPathAtt.append(aci_query_fvRsPathAtt(BASE_URL, i['infraPortSummary']['attributes']['pcPortDn'], cookie))
