@@ -5,6 +5,7 @@ import json
 import yaml
 import argparse
 import re
+import datetime
 from getpass import getpass
 from UliPlot.XLSX import auto_adjust_xlsx_column_width
 requests.urllib3.disable_warnings()
@@ -16,11 +17,12 @@ parser = argparse.ArgumentParser(description='Script to search interface descrip
 parser.add_argument('-d', '--description', type=str, help='String to search. Use comma "," to search multiple strings. Example:\
                     python search-description.py -d SRV01,SRV02.', required=True)
 parser.add_argument('-w', '--maxwidth', type=str, help='Max width of EPGs column. If the EPG column is not well formatted, \
-                    try increasing this parameter.', required=False, default='70')
+                    try to adjust this parameter.', required=False, default='70')
 # To run in python terminal invert comment in the next two lines (for debug) 
 args = parser.parse_args()
 # args = parser.parse_args(['-d', 'PA-AS-MI-01', '-w', '70'])
 
+timestamp = datetime.datetime.now().strftime("%Y%m%d_%H-%M-%S")
 
 def interactive_pwd():
     '''Function to ask password if not set'''
@@ -79,9 +81,9 @@ def aci_query_infraPortSummary(url, description, cookie):
     #get_json = [i['l1PhysIf']['attributes'] for i in get_json['imdata']]
     formatted_str = json.dumps(get_json, indent=4)
     #print(formatted_str)
-    log_file = open("output.log", "w")
-    log_file.write(formatted_str)
-    log_file.write("\n")
+    #log_file = open("output.log", "w")
+    #log_file.write(formatted_str)
+    #log_file.write("\n")
     return get_json
 
 def aci_query_operStQual(url, pod, node, interface, cookie):
@@ -155,6 +157,11 @@ def listDict_to_table(listDict):
         table.add_row(dict.values())
     return table
 
+def format_logs(data):
+    for i in data:
+        i['EPGs'] = i['EPGs'].split(' ||\n')
+    return data
+
 ########################
 
 interactive_pwd()
@@ -188,3 +195,6 @@ for descr in args.description.split(','):
     #print(data_extract)
     outputTable = listDict_to_table(data_extract)
     print(outputTable)
+    data_extract_log = format_logs(data_extract)
+    with open('output__' + timestamp + '.log', 'a') as output:
+        output.write(json.dumps(data_extract_log, indent=4))
